@@ -46,8 +46,32 @@ async function dblogin(email,password){
     }
 }
 
+async function dbVerifyEmail(user_id){
+    const pool = await getClient()
+    try{
+        await pool.query("BEGIN")
+        const result = await pool.query("Select count(verified) from users where id = $1",{user_id})
+        if (result.rows[0].count == 0){
+            const userNotFoundError = new Error("User not found")
+            userNotFoundError.statusCode = 400
+            throw userNotFoundError
+        }
+        await pool.query("UPDATE users SET verified = true where id = $1",[user_id])
+        await pool.query("COMMIT")
+    }
+    catch(err){
+        console.log(err)
+        await pool.query("ROLLBACK")
+        throw err
+    }
+    finally{
+        pool.release()
+    }
+}
+
 module.exports = {
     dbsignup,
-    dblogin
+    dblogin,
+    dbVerifyEmail
 }
 
